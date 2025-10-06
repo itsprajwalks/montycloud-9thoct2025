@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+  localstack:
+    image: localstack/localstack:latest
+    container_name: localstack_main
+    hostname: localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=lambda,s3,dynamodb,apigateway
+      - DEBUG=1
+      - AWS_DEFAULT_REGION=us-east-1
+      - LAMBDA_EXECUTOR=docker-reuse
+      - LOCALSTACK_HOSTNAME=host.docker.internal
+    volumes:
+      - "./localstack:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    extra_hosts:                   # 👈 This makes 'host.docker.internal' resolvable inside Lambda containers
+      - "host.docker.internal:host-gateway"
