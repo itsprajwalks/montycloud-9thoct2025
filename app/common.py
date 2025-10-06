@@ -21,11 +21,11 @@ def ensure_bucket():
         existing = s3.list_buckets().get("Buckets", [])
         if not any(b["Name"] == S3_BUCKET for b in existing):
             s3.create_bucket(Bucket=S3_BUCKET)
-            print(f"✅ Created bucket: {S3_BUCKET}")
+            print(f"Created bucket: {S3_BUCKET}")
         else:
-            print(f"ℹ️ Bucket already exists: {S3_BUCKET}")
+            print(f"Bucket already exists: {S3_BUCKET}")
     except Exception as e:
-        print(f"⚠️ Failed to verify/create bucket {S3_BUCKET}: {e}")
+        print(f"Failed to verify/create bucket {S3_BUCKET}: {e}")
 
 
 def get_header(headers, key):
