@@ -10,40 +10,40 @@ SED_BIN="/usr/bin/sed"
 DATE_BIN="/bin/date"
 
 echo "🔍 Using AWS CLI from: $AWS"
-$AWS --version || { echo "❌ AWS CLI not found or not executable. Exiting."; exit 1; }
+$AWS --version || { echo "AWS CLI not found or not executable. Exiting."; exit 1; }
 
 ENDPOINT="http://localhost:4566"
 REGION="us-east-1"
 PACKAGE_DIR="package"
 
 ### --- CLEAN & INSTALL DEPENDENCIES ---
-echo "📦 Cleaning previous builds..."
+echo "Cleaning previous builds..."
 rm -rf $PACKAGE_DIR *.zip requirements.txt || true
 mkdir -p $PACKAGE_DIR
 
-echo "📦 Generating requirements.txt ..."
+echo "Generating requirements.txt ..."
 cat <<EOF > requirements.txt
 boto3==1.34.86
 requests==2.31.0
 requests-toolbelt==1.0.0
 EOF
 
-echo "📦 Installing dependencies into $PACKAGE_DIR ..."
+echo "Installing dependencies into $PACKAGE_DIR ..."
 pip3 install -r requirements.txt -t $PACKAGE_DIR --no-cache-dir >/dev/null
 
 ### --- PACKAGE EACH LAMBDA ---
 for fn in common upload list view delete; do
   if [ -f "app/${fn}.py" ]; then
-    echo "📦 Bundling ${fn}.zip ..."
+    echo "Bundling ${fn}.zip ..."
     cp "app/${fn}.py" $PACKAGE_DIR/
     (cd $PACKAGE_DIR && zip -qr "../${fn}.zip" .)
   else
-    echo "⚠️  Skipping missing app/${fn}.py"
+    echo "Skipping missing app/${fn}.py"
   fi
 done
 
 ### --- CREATE CORE RESOURCES ---
-echo "🌐 Ensuring S3 bucket and DynamoDB table exist..."
+echo "Ensuring S3 bucket and DynamoDB table exist..."
 $AWS --endpoint-url=$ENDPOINT --region $REGION s3 mb s3://images-bucket || true
 
 $AWS --endpoint-url=$ENDPOINT --region $REGION dynamodb create-table \
@@ -56,14 +56,14 @@ $AWS --endpoint-url=$ENDPOINT --region $REGION dynamodb create-table \
 for fn in upload list view delete; do
   FUNC="${fn}Image"
   ZIP="${fn}.zip"
-  echo "🚀 Deploying ${FUNC} ..."
+  echo "Deploying ${FUNC} ..."
 
   if $AWS --endpoint-url=$ENDPOINT --region $REGION lambda get-function --function-name $FUNC >/dev/null 2>&1; then
-    echo "🔁 Updating existing function ${FUNC} ..."
+    echo "Updating existing function ${FUNC} ..."
     $AWS --endpoint-url=$ENDPOINT --region $REGION lambda update-function-code \
       --function-name $FUNC --zip-file fileb://$ZIP >/dev/null
   else
-    echo "🆕 Creating new function ${FUNC} ..."
+    echo "Creating new function ${FUNC} ..."
     $AWS --endpoint-url=$ENDPOINT --region $REGION lambda create-function \
       --function-name $FUNC \
       --runtime python3.9 \
@@ -73,7 +73,7 @@ for fn in upload list view delete; do
       --timeout 30 --memory-size 256 >/dev/null
   fi
 
-  echo "⏳ Waiting for ${FUNC} to stabilize..."
+  echo "Waiting for ${FUNC} to stabilize..."
   $AWS --endpoint-url=$ENDPOINT --region $REGION lambda wait function-active --function-name $FUNC || true
 done
 
@@ -159,10 +159,10 @@ $AWS --endpoint-url=$ENDPOINT --region $REGION apigateway create-deployment \
   --rest-api-id $API_ID --stage-name dev >/dev/null
 
 ### --- DONE ---
-echo "✅ Deployment complete!"
-echo "🌐 API Base URL:"
+echo "Deployment complete!"
+echo "API Base URL:"
 echo "http://localhost:4566/_aws/execute-api/${API_ID}/dev/"
 echo ""
-echo "🧾 Deployed Lambdas:"
+echo "Deployed Lambdas:"
 $AWS --endpoint-url=$ENDPOINT --region $REGION lambda list-functions \
   --query 'Functions[].FunctionName' --output table
