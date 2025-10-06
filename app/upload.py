@@ -59,7 +59,7 @@ def handler(event, context):
 
         print(f"Uploading {file_name} -> s3://{S3_BUCKET}/{key}")
         s3.put_object(Bucket=S3_BUCKET, Key=key, Body=file_bytes)
-        print("✅ File uploaded to S3")
+        print("File uploaded to S3")
 
         # ---- Write metadata to DynamoDB ----
         table = dynamodb.Table(TABLE_NAME)
@@ -72,7 +72,7 @@ def handler(event, context):
             "original_name": file_name or "",
         }
         table.put_item(Item=item)
-        print(f"✅ Metadata stored in DynamoDB: {TABLE_NAME}")
+        print(f"Metadata stored in DynamoDB: {TABLE_NAME}")
 
         # ---- Return success ----
         return _json_response(200, {
@@ -83,7 +83,7 @@ def handler(event, context):
         })
 
     except Exception as e:
-        print("❌ Exception during upload:", str(e))
+        print("Exception during upload:", str(e))
         traceback.print_exc()
         return _json_response(500, {
             "error": str(e),
