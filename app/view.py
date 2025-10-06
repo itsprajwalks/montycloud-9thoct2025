@@ -53,7 +53,7 @@ def handler(event, context):
         # --- Rewrite internal IP/hostname to localhost for usability ---
         presigned_url = presigned_url.replace(localstack_host, "localhost")
 
-        print(f"✅ Generated presigned URL: {presigned_url}")
+        print(f"Generated presigned URL: {presigned_url}")
 
         return _response(200, {
             "id": image_id,
@@ -66,5 +66,5 @@ def handler(event, context):
         })
 
     except Exception as e:
-        print(f"❌ View handler error: {e}")
+        print(f"View handler error: {e}")
         return _response(500, {"error": str(e)})
