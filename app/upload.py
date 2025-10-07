@@ -4,7 +4,7 @@ import time
 import traceback
 import base64
 from requests_toolbelt.multipart import decoder
-from common import s3, dynamodb, S3_BUCKET, TABLE_NAME, ensure_bucket, get_header
+from app.common import s3, dynamodb, S3_BUCKET, TABLE_NAME, ensure_bucket, get_header
 
 
 def _json_response(status, body_dict):

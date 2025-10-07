@@ -1,5 +1,5 @@
 import json
-from common import s3, dynamodb, S3_BUCKET, TABLE_NAME
+from app.common import s3, dynamodb, S3_BUCKET, TABLE_NAME
 
 
 def handler(event, context):
