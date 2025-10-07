@@ -1,57 +1,62 @@
-# 🖼️ Image API on LocalStack  
-*(Lambda + API Gateway + S3 + DynamoDB)*  
+# Image API on LocalStack
 
-A minimal, serverless image management API that runs entirely on **LocalStack**, mimicking real AWS Lambda behavior.  
+*(Lambda + API Gateway + S3 + DynamoDB)*
+
+A minimal, serverless image management API that runs entirely on **LocalStack**, mimicking real AWS Lambda behavior.
 You can upload images (multipart/form-data, no base64), list stored items, get pre-signed URLs for download, and delete both metadata and files.
 
 ---
 
-## 🚀 Features
-- Upload image + metadata (user, description)
-- List all uploaded items from DynamoDB
-- View an image via pre-signed URL
-- Delete image + metadata from both S3 and DynamoDB
-- Fully local, offline AWS emulation using LocalStack
+## Features
+
+* Upload image + metadata (user, description)
+* List all uploaded items from DynamoDB
+* View an image via pre-signed URL
+* Delete image + metadata from both S3 and DynamoDB
+* Fully local, offline AWS emulation using LocalStack
 
 ---
 
-## 🧩 Architecture
+## Architecture
 
-| Service | Purpose |
-|----------|----------|
-| **API Gateway** | Routes HTTP requests to Lambda functions |
-| **Lambda (Python)** | Implements CRUD operations for image management |
-| **S3 (LocalStack)** | Stores the uploaded image files |
-| **DynamoDB (LocalStack)** | Persists image metadata |
-| **LocalStack** | Provides full AWS emulation for local testing |
+| Service                   | Purpose                                         |
+| ------------------------- | ----------------------------------------------- |
+| **API Gateway**           | Routes HTTP requests to Lambda functions        |
+| **Lambda (Python)**       | Implements CRUD operations for image management |
+| **S3 (LocalStack)**       | Stores the uploaded image files                 |
+| **DynamoDB (LocalStack)** | Persists image metadata                         |
+| **LocalStack**            | Provides full AWS emulation for local testing   |
 
-All services run locally on:  
+All services run locally on:
 `http://localhost:4566`
 
 ---
 
-## ⚙️ Requirements
+## Requirements
 
-- **Docker + LocalStack** running  
-- **AWS CLI** installed (`aws --version`)  
-- **Python 3.9+** and `pip`  
-- **requests-toolbelt** and `boto3` for multipart + S3 access  
+* **Docker + LocalStack** running
+* **AWS CLI** installed (`aws --version`)
+* **Python 3.9+** and `pip`
+* **requests-toolbelt** and `boto3` for multipart + S3 access
 
 ---
 
-## 🧱 Setup & Deployment
+## Setup & Deployment
 
 ```bash
 # Clone and navigate
 git clone https://github.com/itsprajwalks/montycloud-9thoct2025.git
 cd montycloud-9thoct2025
 
-# Install deps (optional for local execution)
+# Start LocalStack using Docker Compose
+docker-compose up -d
+
+# Install dependencies (optional for local execution)
 pip install -r requirements.txt
 
 # Deploy all Lambdas + API Gateway routes
 bash deploy.sh
-````
+```
 
 Once deployed, your API base URL will look like:
 
@@ -61,9 +66,9 @@ http://localhost:4566/_aws/execute-api/<API_ID>/dev
 
 ---
 
-## 📡 API Documentation
+## API Documentation
 
-### **1️⃣ POST /upload**
+### 1. POST /upload
 
 Upload an image with metadata.
 **Form fields**:
@@ -95,7 +100,7 @@ curl -X POST \
 
 ---
 
-### **2️⃣ GET /list**
+### 2. GET /list
 
 List all uploaded images and metadata from DynamoDB.
 
@@ -121,9 +126,9 @@ curl "http://localhost:4566/_aws/execute-api/<API_ID>/dev/list"
 
 ---
 
-### **3️⃣ GET /view/{id}**
+### 3. GET /view/{id}
 
-Fetch metadata + a **pre-signed S3 URL** to download or view the image.
+Fetch metadata and a **pre-signed S3 URL** to download or view the image.
 
 **Example:**
 
@@ -149,7 +154,7 @@ Open the `url` field in a browser to download or preview the image.
 
 ---
 
-### **4️⃣ DELETE /delete/{id}**
+### 4. DELETE /delete/{id}
 
 Deletes both the S3 object and its DynamoDB record.
 
@@ -171,7 +176,7 @@ curl -X DELETE \
 
 ---
 
-## 🧠 Notes
+## Notes
 
 * Pre-signed URLs are valid for **1 hour**.
 * `view.py` automatically replaces the internal container IP (e.g., `192.*`) with `localhost` for accessibility.
@@ -179,7 +184,7 @@ curl -X DELETE \
 
 ---
 
-## 🧪 LocalStack Debug Commands
+## LocalStack Debug Commands
 
 Check services:
 
@@ -194,7 +199,7 @@ Re-deploy Lambdas:
 bash deploy.sh
 ```
 
-Clean all:
+Clean all resources:
 
 ```bash
 docker-compose down -v
@@ -202,6 +207,10 @@ docker-compose down -v
 
 ---
 
-## 🧑‍💻 Author
+## Author
 
 **Prajwal K S**
+
+---
+
+Would you like me to also add a **“Project Folder Structure”** section before the API docs (showing how `/services/task/*.py`, `/deploy.sh`, and `/docker-compose.yml` are organized)? It’ll make it even clearer for readers or interviewers.
