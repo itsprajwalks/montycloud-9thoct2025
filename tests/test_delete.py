@@ -1,57 +1,72 @@
-import boto3
 import json
-import os
+import pytest
+import boto3
+from moto import mock_aws
+from app import delete
 
 
-def _response(status_code, body_dict):
-    """Standard API Gateway JSON response"""
-    return {
-        "statusCode": status_code,
-        "headers": {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-        },
-        "body": json.dumps(body_dict, default=str),
-    }
+@pytest.fixture(scope="function")
+def aws_env(monkeypatch):
+    """Mock AWS services for each test."""
+    with mock_aws():
+        # Setup DynamoDB
+        dynamodb = boto3.resource("dynamodb", region_name="us-east-1")
+        table_name = "images"
+        table = dynamodb.create_table(
+            TableName=table_name,
+            KeySchema=[{"AttributeName": "id", "KeyType": "HASH"}],
+            AttributeDefinitions=[{"AttributeName": "id", "AttributeType": "S"}],
+            BillingMode="PAY_PER_REQUEST"
+        )
+
+        # Setup S3
+        s3 = boto3.client("s3", region_name="us-east-1")
+        bucket_name = "images-bucket"
+        s3.create_bucket(Bucket=bucket_name)
+
+        # Patch environment variables
+        monkeypatch.setenv("TABLE_NAME", table_name)
+        monkeypatch.setenv("S3_BUCKET", bucket_name)
+        monkeypatch.delenv("LOCALSTACK_HOSTNAME", raising=False)
+
+        yield {"table": table, "s3": s3, "bucket": bucket_name}
 
 
-def handler(event, context):
-    try:
-        # Read env vars (use Moto if LOCALSTACK_HOSTNAME not set)
-        localstack_host = os.getenv("LOCALSTACK_HOSTNAME")
-        endpoint_url = f"http://{localstack_host}:4566" if localstack_host else None
+@pytest.mark.order(7)
+def test_delete_existing_item(aws_env):
+    """Should delete S3 object + DynamoDB record."""
+    table = aws_env["table"]
+    s3 = aws_env["s3"]
+    bucket = aws_env["bucket"]
 
-        dynamodb = boto3.resource("dynamodb", region_name="us-east-1", endpoint_url=endpoint_url)
-        s3 = boto3.client("s3", region_name="us-east-1", endpoint_url=endpoint_url)
+    # Seed data
+    s3.put_object(Bucket=bucket, Key="x.jpg", Body=b"data")
+    table.put_item(Item={"id": "123", "filename": "x.jpg"})
 
-        table_name = os.getenv("TABLE_NAME", "images")
-        bucket_name = os.getenv("S3_BUCKET", "images-bucket")
-        table = dynamodb.Table(table_name)
+    event = {"pathParameters": {"id": "123"}}
+    result = delete.handler(event, None)
+    body = json.loads(result["body"])
 
-        image_id = event.get("pathParameters", {}).get("id")
-        if not image_id:
-            return _response(400, {"error": "Missing id"})
+    assert result["statusCode"] == 200
+    assert "deleted" in body
+    assert body["key"] == "x.jpg"
 
-        # Lookup record
-        resp = table.get_item(Key={"id": image_id})
-        item = resp.get("Item")
 
-        if not item:
-            return _response(404, {"error": "Not found"})
+@pytest.mark.order(8)
+def test_delete_missing_id():
+    """Missing path parameter should return 400."""
+    result = delete.handler({"pathParameters": {}}, None)
+    body = json.loads(result["body"])
+    assert result["statusCode"] == 400
+    assert "error" in body
 
-        key = item["filename"]
 
-        # Delete from S3 (ignore if not found)
-        try:
-            s3.delete_object(Bucket=bucket_name, Key=key)
-        except Exception:
-            pass
+@pytest.mark.order(9)
+def test_delete_not_found(aws_env):
+    """Should return 404 if item doesn’t exist."""
+    event = {"pathParameters": {"id": "999"}}
+    result = delete.handler(event, None)
+    body = json.loads(result["body"])
 
-        # Delete from DynamoDB
-        table.delete_item(Key={"id": image_id})
-
-        return _response(200, {"deleted": image_id, "key": key})
-
-    except Exception as e:
-        print(f"Delete handler error: {e}")
-        return _response(500, {"error": str(e)})
+    assert result["statusCode"] == 404
+    assert "error" in body
