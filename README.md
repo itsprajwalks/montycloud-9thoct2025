@@ -211,6 +211,4 @@ docker-compose down -v
 
 **Prajwal K S**
 
----
 
-Would you like me to also add a **“Project Folder Structure”** section before the API docs (showing how `/services/task/*.py`, `/deploy.sh`, and `/docker-compose.yml` are organized)? It’ll make it even clearer for readers or interviewers.
