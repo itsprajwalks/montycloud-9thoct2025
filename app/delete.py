@@ -1,33 +1,53 @@
+import boto3
 import json
-from app.common import s3, dynamodb, S3_BUCKET, TABLE_NAME
+import os
+
+
+def _response(status_code, body_dict):
+    """Standard API Gateway JSON response"""
+    return {
+        "statusCode": status_code,
+        "headers": {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+        },
+        "body": json.dumps(body_dict, default=str),
+    }
 
 
 def handler(event, context):
-    """Delete an image entry from S3 and DynamoDB"""
     try:
-        # Get image ID from path params
-        path_params = event.get("pathParameters") or {}
-        image_id = path_params.get("id")
+        # ✅ Use LocalStack endpoint *only if available*
+        localstack_host = os.getenv("LOCALSTACK_HOSTNAME")
+        endpoint_url = f"http://{localstack_host}:4566" if localstack_host else None
+
+        # ✅ Initialize clients
+        dynamodb = boto3.resource("dynamodb", region_name="us-east-1", endpoint_url=endpoint_url)
+        s3 = boto3.client("s3", region_name="us-east-1", endpoint_url=endpoint_url)
+
+        table_name = os.getenv("TABLE_NAME", "images")
+        bucket_name = os.getenv("S3_BUCKET", "images-bucket")
+        table = dynamodb.Table(table_name)
+
+        image_id = event.get("pathParameters", {}).get("id")
         if not image_id:
             return _response(400, {"error": "Missing id"})
 
-        table = dynamodb.Table(TABLE_NAME)
-
-        # Get existing record
-        get_resp = table.get_item(Key={"id": image_id})
-        item = get_resp.get("Item")
+        # ✅ Lookup record safely
+        resp = table.get_item(Key={"id": image_id})
+        item = resp.get("Item")
         if not item:
             return _response(404, {"error": "Not found"})
 
-        key = item.get("filename")
+        key = item["filename"]
 
-        # Delete from S3 (idempotent)
+        # ✅ Safe delete from S3
         try:
-            s3.delete_object(Bucket=S3_BUCKET, Key=key)
-        except Exception as s3_err:
-            print(f"⚠️  S3 delete warning: {s3_err}")
+            s3.delete_object(Bucket=bucket_name, Key=key)
+        except Exception:
+            pass
 
-        # Delete from DynamoDB
+        # ✅ Delete from DynamoDB
         table.delete_item(Key={"id": image_id})
 
         return _response(200, {"deleted": image_id, "key": key})
@@ -35,15 +55,3 @@ def handler(event, context):
     except Exception as e:
         print(f"Delete handler error: {e}")
         return _response(500, {"error": str(e)})
-
-
-def _response(status_code, body_dict):
-    """Utility to build valid API Gateway proxy response"""
-    return {
-        "statusCode": status_code,
-        "headers": {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*"  # enables browser/Postman JSON display
-        },
-        "body": json.dumps(body_dict)
-    }
