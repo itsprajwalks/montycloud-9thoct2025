@@ -11,7 +11,9 @@ services:
       - AWS_DEFAULT_REGION=us-east-1
       - DEBUG=1
       - PERSISTENCE=1
+      - LAMBDA_HANDLER=app.upload.handler   
     volumes:
+      - "./app:/var/task"                   
       - "./localstack:/var/lib/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"
     network_mode: bridge
